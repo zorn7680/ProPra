@@ -11,7 +11,7 @@ public class ImageConverter {
 		
 		/* write function to extract width and height from byte data */
 		
-		short test = ByteTools.getUnsignedShortFromByteArray(testImage.inputByteData, 12);
+		short test = ByteTools.getShortFromByte(testImage.inputByteData, 12);
 		System.out.println(test);
 		
 		
