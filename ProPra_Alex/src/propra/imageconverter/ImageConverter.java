@@ -2,7 +2,6 @@ package propra.imageconverter;
 
 public class ImageConverter {
 	public static void main(String[] args) throws ProgramMalfunctionException {
-		// some comment
 		try {
 			InputProcessor.validateInput(args);
 			if (InputProcessor.IN_TYPE == "propra" && InputProcessor.OUT_TYPE == "tga") {
