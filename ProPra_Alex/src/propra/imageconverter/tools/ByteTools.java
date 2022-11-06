@@ -1,12 +1,13 @@
 package propra.imageconverter.tools;
 
 /* Die Funktionalität dieser Klasse habe ich aus dem Review-Beitrag von Herrn
- * Stefan Krempel übernommen. Ich wollte nach Abgabe meiner Lösung einen 
- * ähnlichen Ansatz ergänzen, bin dann im Review aber über diese Implementierung 
- * gestolpert. Sie erscheint mir hervorragend umgesetzt, es wäre Unsinn, diese 
+ * Stefan Krempel übernommen. Ich wollte in meiner Lösung einen ähnlichen Ansatz 
+ * ergänzen, bin dann im Review aber über diese Implementierung 
+ * gestolpert. Sie erscheint mir hervorragend umgesetzt. Es wäre Unsinn, diese 
  * jetzt nachzuprogrammieren, nur um "es selber gemacht zu haben", denn ich 
  * könnte es nur schlechter machen. Da es sich hierbei um reine Hilfsmethoden 
- * handelt, die mein Programmkonzept nicht beeinflussen, halte ich das für legitim.
+ * handelt, die mein eigenes Programmkonzept (das ja hier den Löwenanteil der
+ * Eigenleistung ausmacht) nicht beeinflussen, halte ich das für legitim.
  */
 
 public class ByteTools {
