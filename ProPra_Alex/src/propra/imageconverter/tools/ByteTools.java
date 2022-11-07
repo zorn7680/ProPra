@@ -1,15 +1,17 @@
 package propra.imageconverter.tools;
 
-/* Die Funktionalität dieser Klasse habe ich aus übernommen. Ich wollte in 
- * meiner Lösung einen ähnlichen Ansatz ergänzen, bin dann im Review aber über 
- * diese Implementierung gestolpert. Sie erscheint mir hervorragend umgesetzt. 
- * Es wäre Unsinn, diese jetzt nachzuprogrammieren, nur um "es selber gemacht 
- * zu haben", denn ich könnte es nur schlechter machen. Da es sich hierbei um 
- * reine Hilfsmethoden handelt, die mein eigenes Programmkonzept (das ja hier 
- * den Löwenanteil der Eigenleistung ausmacht) nicht beeinflussen, halte ich 
- * das für legitim.
+/* Die Funktionalität dieser Klasse habe ich aus einem Review übernommen, eine
+ * vergleichbare Utility-Klasse für die Byte-Umrechnungen wollte ich ohnehin
+ * in meiner Implementierung ergänzen.  
+ * Nun bin ich im Review über diese Implementierung gestolpert. Sie 
+ * erscheint mir hervorragend umgesetzt. Es wäre Unsinn, diese jetzt 
+ * nachzuprogrammieren, nur um "es selber gemacht zu haben". Ich habe den
+ * Code studiert und verstehe, wie er funktioniert. 
  */
 
+/* This class converts given byte data to different number formats and 
+ * vice versa.
+ */
 public class ByteTools {
     
 	// returns an unsigned short from given byte array

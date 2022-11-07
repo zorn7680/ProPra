@@ -3,6 +3,10 @@ package propra.imageconverter.tools;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+/* This class has two functions: (1) calculate the checksum for given byte data 
+ * and (2) validate a given checksum against a calculated checksum from given
+ * byte data.
+ */
 public class ChecksumTools {
 	private static byte[] data;
 	private static int[] Ai;

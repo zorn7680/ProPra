@@ -7,12 +7,11 @@ public class ImageConverter {
 	public static void main(String[] args) throws ProgramMalfunctionException, IOException {
 		
 		TGAImage testImage = new TGAImage("images/alex.tga");
-//		testImage.printHeader("byte");
+		testImage.printHeader("byte");
 		
-		/* write function to extract width and height from byte data */
 		
-		short test = ByteTools.getShortFromByteArray(testImage.inputByteData, 12);
-		System.out.println(test);
+//		short test = ByteTools.getShortFromByteArray(testImage.inputByteData, 12);
+//		System.out.println(test);
 		
 		
 		
