@@ -37,8 +37,8 @@ public class TGAImage extends ImageFile {
 			/* Optionale Anforderung - falscher Bild-/Kompressionstyp */
 			imageType = inputByteData[2];
 			if(imageType != 2) {
-				System.err.println("Abbruch - Falsche(r) Bildtyp/Kompression!");
-				System.exit(123);
+//				System.err.println("Abbruch - Falsche(r) Bildtyp/Kompression!");
+//				System.exit(123);
 			}
 
 			for (int i = 0; i < 18; i++) {
