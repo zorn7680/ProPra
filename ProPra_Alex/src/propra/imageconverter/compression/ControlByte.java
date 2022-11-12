@@ -8,10 +8,8 @@ public class ControlByte {
 
 	private int type;
 	private int length;
-	private byte inByte;
 
 	public ControlByte(byte inByte) {
-		this.inByte = inByte;
 		this.type = (STEUERBIT & inByte) != 0 ? 1 : 0;
 		this.length = (~STEUERBIT & inByte) + 1;
 	}
