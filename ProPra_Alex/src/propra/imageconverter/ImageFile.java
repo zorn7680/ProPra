@@ -6,15 +6,15 @@ public class ImageFile {
 	public String[] inputHexData;
 	public byte[] headerData;
 	public byte[] rgbData;
-	
-	private int width; 			// TGA: bytes 13,12  -  ProPra: bytes 14,13 
-	private int height; 		// TGA: bytes 15,14  -  ProPra: bytes 16,15
-	
+
+	private int width; // TGA: bytes 13,12 - ProPra: bytes 14,13
+	private int height; // TGA: bytes 15,14 - ProPra: bytes 16,15
+
 	public final int HEADER_SIZE_PROPRA = 30;
 	public final int HEADER_SIZE_TGA = 18;
-	
-	public final byte[] DIMENSIONS_TGA = {13,12,15,14};
-	public final byte[] DIMENSIONS_PROPRA = {14,13,16,15};
+
+	public final byte[] DIMENSIONS_TGA = { 13, 12, 15, 14 };
+	public final byte[] DIMENSIONS_PROPRA = { 14, 13, 16, 15 };
 
 	public void printHeader(String mode) {
 		switch (mode) {
@@ -36,25 +36,28 @@ public class ImageFile {
 			break;
 		}
 	}
-	
+
 	/* Hilfsmethode - RGB-Daten in Byte-Array separieren */
-	public void extractRgbData(byte[] dimensions, int headerSize) { 
+	public void extractRgbData(byte[] dimensions, int headerSize) {
 		int pixels = getPixelAmount(dimensions);
-		
+
 		/* Optionale Anforderung - inkonsistente Bilddimensionen */
-		if(pixels == 0 ) {
+		if (pixels == 0) {
 			System.err.println("Abbruch - Inkonsistente Bilddimension (Nullbreite/Nullhöhe)!");
 			System.exit(123);
 		}
 		int rgbValuesCount = pixels * 3;
 		rgbData = new byte[rgbValuesCount];
-		
+
 		for (int i = 0; i < rgbValuesCount; i++) {
 			rgbData[i] = inputByteData[i + headerSize];
 		}
 	}
-	
-	/* Hilfsmethode - berechne Dimensionen und Bilddatenmenge abhängig vom Bildformat */
+
+	/*
+	 * Hilfsmethode - berechne Dimensionen und Bilddatenmenge abhängig vom
+	 * Bildformat
+	 */
 	private int getPixelAmount(byte[] dimensions) {
 		int imageWidth = Integer.parseInt((inputHexData[dimensions[0]] + inputHexData[dimensions[1]]), 16);
 		int imageHeight = Integer.parseInt((inputHexData[dimensions[2]] + inputHexData[dimensions[3]]), 16);
@@ -62,7 +65,7 @@ public class ImageFile {
 		height = imageHeight;
 		return imageWidth * imageHeight;
 	}
-	
+
 	public int getWidth() {
 		return width;
 	}
