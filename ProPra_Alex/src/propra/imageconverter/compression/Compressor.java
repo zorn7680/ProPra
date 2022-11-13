@@ -28,6 +28,7 @@ public class Compressor {
 
 		do {
 			// code (1)
+			p2 = inStream.readNBytes(1);
 			if (Arrays.equals(p1, p2)) {
 				if (blockRunning == true) {
 					// code (5)
