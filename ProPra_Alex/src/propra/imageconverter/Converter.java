@@ -17,31 +17,36 @@ import java.io.File;
 import propra.imageconverter.baseEncoding.Base32Decoder;
 import propra.imageconverter.baseEncoding.Base32Encoder;
 import propra.imageconverter.compression.Compressor;
+import propra.imageconverter.imageFormats.CompressedProPraImage;
+import propra.imageconverter.imageFormats.CompressedTGAImage;
+import propra.imageconverter.imageFormats.ProPraImage;
+import propra.imageconverter.imageFormats.TGAImage;
 import propra.imageconverter.tools.ChecksumTools;
 
 public final class Converter {
 
 	/*
-	 * Dieses undynamische Methodenkonstrukt ist nicht OOP-tauglich, aber es hat die
-	 * Zeit für eine modularere Implementierung gefehlt. Architektur wird evtl. nach
-	 * dem Bearbeitungsabschnitt 2 noch verbessert. Ich möchte mich bereits im
-	 * Vorfeld bei der Person entschuldigen, die diesen Code reviewen muss!
-	 * 
-	 * Hinweis: Der meiste Code hier wiederholt sich und braucht nicht jedes
-	 * Mal aufs neue durchgearbeitet werden (vielleicht hilft's)  
+	 * HINWEIS Dieses undynamische Methodenkonstrukt ist nicht OOP-tauglich, 
+	 * aber es hat die Zeit für eine modularere Implementierung gefehlt. 
+	 * Architektur wird evtl. nach dem Bearbeitungsabschnitt 2 noch verbessert. 
+	 * Ich möchte mich bereits im Vorfeld bei der Person entschuldigen, die 
+	 * diesen Code reviewen muss... ;-)
+	 * Es wiederholt sich aber vieles, durch meine Kommentare werden die 
+	 * einzelnen Teilstücke deutlich und müssen nicht mehrfach geprüft werden.
 	 */
 
 
 	/*
-	 * ===================================================================== LEGACY
-	 * Operations (Konvertierungen aus Abschnitt 1) -----------------
+	 * ===================================================================== 
+	 * LEGACY Operations (Konvertierungen aus Abschnitt 1) -----------------
 	 * =====================================================================
 	 */
 
 
-	// Konvertiert TGA zu TGA
+	// Konvertiert TGA nach TGA
 	protected static void convertTGAToTGA(String inPath, String outPath) throws IOException {
 		try {
+			// Quellbild einlesen und Daten ins Ausgabeformat überführen
 			TGAImage sourceImage = new TGAImage(inPath);
 
 			byte[] targetHeaderData = sourceImage.headerData;
@@ -55,6 +60,7 @@ public final class Converter {
 			outputData = os.toByteArray();
 			Files.write(Paths.get(outPath), outputData);
 
+			// Prüfung: Hat Schreibvorgang funktioniert?
 			File myFile = new File(outPath);
 			if (myFile.isFile()) {
 				System.out.println("...erfolgreich konvertiert!");
@@ -65,15 +71,15 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert TGA zu ProPra
+	// Konvertiert TGA nach ProPra
 	protected static void convertTGAToProPra(String inPath, String outPath) throws IOException {
 		try {
+			// Quellbild einlesen, leeres Zielbild anlegen und Daten aufbauen
 			TGAImage sourceImage = new TGAImage(inPath);
 			ProPraImage targetImage = new ProPraImage();
 
 			/* Header für ProPra-Zieldatei aufbauen */
-			byte[] formatId = { 80, 114, 111, 80, 114, 97, 87, 105, 83, 101, 50, 50 }; // bytes 0 - 11: formatId ->
-																						// "ProPraWiSe22"
+			byte[] formatId = { 80, 114, 111, 80, 114, 97, 87, 105, 83, 101, 50, 50 }; 
 			for (int i = 0; i < 12; i++) {
 				targetImage.headerData[i] = formatId[i];
 			}
@@ -88,9 +94,8 @@ public final class Converter {
 
 			targetImage.headerData[17] = 24; // byte 17: bitsPerDot
 
-			int imageWidth = Integer.parseInt((sourceImage.inputHexData[13] + sourceImage.inputHexData[12]), 16); // bytes
-																													// 18-25:
-																													// dataSegmentSize
+			// Datensegmentgröße für ProPra bestimmen
+			int imageWidth = Integer.parseInt((sourceImage.inputHexData[13] + sourceImage.inputHexData[12]), 16); 
 			int imageHeight = Integer.parseInt((sourceImage.inputHexData[15] + sourceImage.inputHexData[14]), 16);
 			long dataSegmentSize = (long) imageWidth * (long) imageHeight * 3;
 			ByteBuffer bb = ByteBuffer.allocate(8);
@@ -101,7 +106,7 @@ public final class Converter {
 				targetImage.headerData[i + 18] = targetDataSegmentSize[i];
 			}
 
-			/* RGB-Reihenfolge ändern von TGA(B-G-R / 2-1-0) zu ProPra(R-B-G / 0-2-1 ) */
+			// RGB-Reihenfolge ändern
 			byte[] targetRgbData = new byte[sourceImage.rgbData.length];
 			targetImage.rgbData = new byte[targetRgbData.length];
 			int tripletsCount = sourceImage.rgbData.length / 3;
@@ -114,19 +119,21 @@ public final class Converter {
 				factor += 2;
 			}
 
+			// Prüfsumme berechnen
 			byte[] targetChecksum = ChecksumTools.getChecksum(targetImage.rgbData); // bytes 26-29: checksum
 			for (int i = 26; i < 30; i++) {
 				targetImage.headerData[i] = targetChecksum[i - 26];
 			}
 
+			// Zieldatei schreiben
 			byte[] outputData = new byte[targetImage.headerData.length + targetImage.rgbData.length];
-
 			ByteArrayOutputStream os = new ByteArrayOutputStream();
 			os.write(targetImage.headerData);
 			os.write(targetImage.rgbData);
 			outputData = os.toByteArray();
 			Files.write(Paths.get(outPath), outputData);
 
+			// Prüfe: War Schreibvorgang erfolgreich?
 			File myFile = new File(outPath);
 			if (myFile.isFile()) {
 				System.out.println("...erfolgreich konvertiert!");
@@ -137,13 +144,14 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert ProPra zu TGA
+	// Konvertiert ProPra nach TGA
 	protected static void convertProPraToTGA(String inPath, String outPath) throws IOException {
 		try {
+			// Quellbild einlesen, leeres Zielbild anlegen
 			ProPraImage sourceImage = new ProPraImage(inPath);
 			TGAImage targetImage = new TGAImage();
 
-			/* Header für TGA-Zieldatei aufbauen */
+			// Header-Daten für Zielbild aufbauen
 			targetImage.headerData[0] = 0; // byte 0 - idLength
 
 			targetImage.headerData[1] = 0; // byte 1 - colorMapType
@@ -184,9 +192,8 @@ public final class Converter {
 
 			targetImage.headerData[17] = 32; // byte 17 - imageAttributes
 
-			/*
-			 * RGB-Daten-Reihenfolge ändern von ProPra(R-B-G / 0-2-1) zu TGA(B-G-R / 2-1-0 )
-			 */
+
+			// RGB-Daten-Reihenfolge ändern
 			byte[] targetRgbData = new byte[sourceImage.rgbData.length];
 			targetImage.rgbData = new byte[targetRgbData.length];
 			int tripletsCount = sourceImage.rgbData.length / 3;
@@ -199,14 +206,15 @@ public final class Converter {
 				factor += 2;
 			}
 
+			// Zieldatei schreiben
 			byte[] outputData = new byte[targetImage.headerData.length + targetImage.rgbData.length];
-
 			ByteArrayOutputStream os = new ByteArrayOutputStream();
 			os.write(targetImage.headerData);
 			os.write(targetImage.rgbData);
 			outputData = os.toByteArray();
 			Files.write(Paths.get(outPath), outputData);
 
+			// Prüfung: Schreibvorgang erfolgreich?
 			File myFile = new File(outPath);
 			if (myFile.isFile()) {
 				System.out.println("...erfolgreich konvertiert!");
@@ -217,9 +225,10 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert ProPra zu ProPra
+	// Konvertiert ProPra nach ProPra
 	protected static void convertProPraToProPra(String inPath, String outPath) throws IOException {
 		try {
+			// Überführe 1:1 Quell- in Zieldatei, keine Operationen erforderlich
 			ProPraImage sourceImage = new ProPraImage(inPath);
 			byte[] outputData = sourceImage.inputByteData;
 			Files.write(Paths.get(outPath), outputData);
@@ -236,8 +245,8 @@ public final class Converter {
 
 
 	/*
-	 * ===================================================================== BASE32
-	 * Operations ---------------------------------------------------
+	 * ===================================================================== 
+	 * BASE32 Operations ---------------------------------------------------
 	 * =====================================================================
 	 */
 
@@ -246,6 +255,7 @@ public final class Converter {
 	protected static void encodeToBase32(String inPath, String outPath) throws IOException {
 		System.out.println("Encoding source file to BASE32...");
 
+		// Quelldaten einlesen
 		byte[] inputByteData = Files.readAllBytes(Paths.get(inPath));
 		int[] ibdu = new int[inputByteData.length];
 
@@ -253,8 +263,11 @@ public final class Converter {
 			ibdu[i] = Byte.toUnsignedInt(inputByteData[i]);
 		}
 
+		// Quelldaten codieren
 		Base32Encoder enc = new Base32Encoder();
 		String result = enc.encode(ibdu);
+		
+		// Zieldatei schreiben
 		Files.write(Paths.get(outPath), result.getBytes());
 		System.out.println("...success!");
 	}
@@ -263,14 +276,17 @@ public final class Converter {
 	protected static void decodeFromBase32(String inPath, String outPath) throws IOException {
 		System.out.println("Decoding source file from BASE32...");
 
+		// Quelldaten einlesen
 		byte[] inputByteData = Files.readAllBytes(Paths.get(inPath));
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		bos.write(inputByteData);
 		String inputStringData = bos.toString();
+		
+		// Decodieren
 		Base32Decoder dec = new Base32Decoder();
 		byte[] result = dec.decode(inputStringData);
-		System.out.println("Länge result: " + result.length);
-		System.out.println(outPath);
+		
+		// Zieldatei schreiben
 		Files.write(Paths.get(outPath), result);
 		System.out.println("...success!");
 	}
@@ -284,21 +300,24 @@ public final class Converter {
 	 */
 
 
-	// Konvertiert TGA_komprimiert nach TGA_unkomprimiert
+	// Konvertiert TGA komprimiert nach TGA unkomprimiert
 	protected static void convertCTGAToUTGA(String inPath, String outPath) throws IOException {
 		try {
+			// Quelldatei einlesen
 			CompressedTGAImage sourceImage = new CompressedTGAImage(inPath);
 
+			// Header-Anpassungen für Kompression
 			byte[] targetHeaderData = sourceImage.headerData;
 			targetHeaderData[2] = 2;
 			byte[] targetRgbData = sourceImage.rgbData;
 
 			byte[] outputData = new byte[targetHeaderData.length + targetRgbData.length];
-
 			ByteArrayOutputStream os = new ByteArrayOutputStream();
 			os.write(targetHeaderData);
 			os.write(targetRgbData);
 			outputData = os.toByteArray();
+
+			// Zieldatei schreiben
 			Files.write(Paths.get(outPath), outputData);
 
 			File myFile = new File(outPath);
@@ -311,9 +330,10 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert TGA_komprimiert nach TGA_komprimiert
+	// Konvertiert TGA komprimiert nach TGA komprimiert
 	protected static void convertCTGAToCTGA(String inPath, String outPath) throws IOException {
 		try {
+			// Quelldatei einlesen
 			CompressedTGAImage sourceImage = new CompressedTGAImage(inPath);
 
 			byte[] targetHeaderData = sourceImage.headerData;
@@ -325,6 +345,8 @@ public final class Converter {
 			os.write(targetHeaderData);
 			os.write(targetRgbData);
 			outputData = os.toByteArray();
+			
+			// Zieldatei schreiben
 			Files.write(Paths.get(outPath), outputData);
 
 			File myFile = new File(outPath);
@@ -337,12 +359,17 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert TGA_unkomprimiert nach TGA_komprimiert
+	// Konvertiert TGA unkomprimiert nach TGA komprimiert
 	protected static void convertUTGAToCTGA(String inPath, String outPath) throws IOException {
 		try {
+			//Quelldatei einlesen
 			TGAImage sourceImage = new TGAImage(inPath);
+			
+			// Header-Anpassung für Kompression
 			byte[] targetHeaderData = sourceImage.headerData;
 			targetHeaderData[2] = 10;
+			
+			// Komprimiere RGB-Daten
 			Compressor comp = new Compressor();
 			byte[] targetRgbData = comp.compress(sourceImage.rgbData);
 			byte[] outputData = new byte[targetHeaderData.length + targetRgbData.length];
@@ -351,6 +378,8 @@ public final class Converter {
 			os.write(targetHeaderData);
 			os.write(targetRgbData);
 			outputData = os.toByteArray();
+			
+			// Zieldatei schreiben
 			Files.write(Paths.get(outPath), outputData);
 
 			File myFile = new File(outPath);
@@ -363,15 +392,15 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert TGA_komprimiert nach Propra_unkomprimiert
+	// Konvertiert TGA komprimiert nach Propra unkomprimiert
 	protected static void convertCTGAToUProPra(String inPath, String outPath) throws IOException {
 		try {
+			// Quelldatei einlesen, leere Zieldatei erzeugen
 			CompressedTGAImage sourceImage = new CompressedTGAImage(inPath);
 			ProPraImage targetImage = new ProPraImage();
 
-			/* Header für ProPra-Zieldatei aufbauen */
-			byte[] formatId = { 80, 114, 111, 80, 114, 97, 87, 105, 83, 101, 50, 50 }; // bytes 0 - 11: formatId ->
-																						// "ProPraWiSe22"
+			// Header für ProPra-Zieldatei aufbauen
+			byte[] formatId = { 80, 114, 111, 80, 114, 97, 87, 105, 83, 101, 50, 50 };
 			for (int i = 0; i < 12; i++) {
 				targetImage.headerData[i] = formatId[i];
 			}
@@ -386,9 +415,7 @@ public final class Converter {
 
 			targetImage.headerData[17] = 24; // byte 17: bitsPerDot
 
-			// quelldaten entkomprimieren - check!
-
-			// quelldatenreihenfolge für zielformat ändern - check!
+			// RGB-Reihenfolge für Zielformat ändern
 			byte[] targetRgbData = new byte[sourceImage.rgbData.length];
 			targetImage.rgbData = new byte[targetRgbData.length];
 			int tripletsCount = sourceImage.rgbData.length / 3;
@@ -401,7 +428,7 @@ public final class Converter {
 				factor += 2;
 			}
 
-			// datensegmentgröße berechnen
+			// Datensegmentgröße berechnen
 			int imageWidth = sourceImage.getWidth();
 			int imageHeight = sourceImage.getHeight();
 			long dataSegmentSize = (long) imageWidth * (long) imageHeight * 3;
@@ -413,7 +440,7 @@ public final class Converter {
 				targetImage.headerData[i + 18] = targetDataSegmentSize[i];
 			}
 
-			// prüfsumme berechnen
+			// Prüfsumme berechnen
 			byte[] targetChecksum = ChecksumTools.getChecksum(targetImage.rgbData); // bytes 26-29: checksum
 			for (int i = 26; i < 30; i++) {
 				targetImage.headerData[i] = targetChecksum[i - 26];
@@ -424,6 +451,8 @@ public final class Converter {
 			os.write(targetImage.headerData);
 			os.write(targetImage.rgbData);
 			outputData = os.toByteArray();
+			
+			// Zieldatei schreiben
 			Files.write(Paths.get(outPath), outputData);
 
 			File myFile = new File(outPath);
@@ -436,15 +465,15 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert TGA_komprimiert nach Propra_komprimiert
+	// Konvertiert TGA komprimiert nach Propra komprimiert
 	protected static void convertCTGAToCProPra(String inPath, String outPath) throws IOException {
 		try {
+			// Quelldatei einlesen, leeres Zielformat erzeugen
 			CompressedTGAImage sourceImage = new CompressedTGAImage(inPath);
 			ProPraImage targetImage = new ProPraImage();
 
-			/* Header für ProPra-Zieldatei aufbauen */
-			byte[] formatId = { 80, 114, 111, 80, 114, 97, 87, 105, 83, 101, 50, 50 }; // bytes 0 - 11: formatId ->
-																						// "ProPraWiSe22"
+			// Header für ProPra-Zieldatei aufbauen
+			byte[] formatId = { 80, 114, 111, 80, 114, 97, 87, 105, 83, 101, 50, 50 };
 			for (int i = 0; i < 12; i++) {
 				targetImage.headerData[i] = formatId[i];
 			}
@@ -459,9 +488,7 @@ public final class Converter {
 
 			targetImage.headerData[17] = 24; // byte 17: bitsPerDot
 
-			// quelldaten entkomprimieren - check!
-
-			// quelldatenreihenfolge für zielformat ändern - check!
+			// RGB-Reihenfolge für Zielformat ändern
 			byte[] targetRgbData = new byte[sourceImage.rgbData.length];
 			targetImage.rgbData = new byte[targetRgbData.length];
 			int tripletsCount = sourceImage.rgbData.length / 3;
@@ -474,13 +501,13 @@ public final class Converter {
 				factor += 2;
 			}
 
-			// zieldaten komprimieren und tauschen
+			// Zieldaten komprimieren und austauschen
 			Compressor comp = new Compressor();
 			byte[] compressedData = comp.compress(targetImage.rgbData);
 			targetImage.rgbData = compressedData;
 
 
-			// Komp. datensegmentgröße berechnen - länge der RGB-Daten
+			// Datensegmentgröße berechnen
 			long dataSegmentSize = targetImage.rgbData.length;
 			ByteBuffer bb = ByteBuffer.allocate(8);
 			bb.order(ByteOrder.LITTLE_ENDIAN);
@@ -490,7 +517,7 @@ public final class Converter {
 				targetImage.headerData[i + 18] = targetDataSegmentSize[i];
 			}
 
-			// prüfsumme berechnen
+			// Prüfsumme berechnen
 			byte[] targetChecksum = ChecksumTools.getChecksum(targetImage.rgbData); // bytes 26-29: checksum
 			for (int i = 26; i < 30; i++) {
 				targetImage.headerData[i] = targetChecksum[i - 26];
@@ -501,6 +528,8 @@ public final class Converter {
 			os.write(targetImage.headerData);
 			os.write(targetImage.rgbData);
 			outputData = os.toByteArray();
+			
+			// Zieldatei schreiben
 			Files.write(Paths.get(outPath), outputData);
 
 			File myFile = new File(outPath);
@@ -513,15 +542,15 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert TGA_unkomprimiert nach Propra_komprimiert
+	// Konvertiert TGA unkomprimiert nach Propra komprimiert
 	protected static void convertUTGAToCProPra(String inPath, String outPath) throws IOException {
 		try {
+			// Quelldatei einlesen, leeres Zielformat erzeugen
 			TGAImage sourceImage = new TGAImage(inPath);
 			ProPraImage targetImage = new ProPraImage();
 
-			/* Header für ProPra-Zieldatei aufbauen */
-			byte[] formatId = { 80, 114, 111, 80, 114, 97, 87, 105, 83, 101, 50, 50 }; // bytes 0 - 11: formatId ->
-																						// "ProPraWiSe22"
+			// Header für ProPra-Zieldatei aufbauen
+			byte[] formatId = { 80, 114, 111, 80, 114, 97, 87, 105, 83, 101, 50, 50 };
 			for (int i = 0; i < 12; i++) {
 				targetImage.headerData[i] = formatId[i];
 			}
@@ -536,9 +565,7 @@ public final class Converter {
 
 			targetImage.headerData[17] = 24; // byte 17: bitsPerDot
 
-			// quelldaten entkomprimieren - check!
-
-			// quelldatenreihenfolge für zielformat ändern - check!
+			// RGB-Reihenfolge ändern für Zielformat
 			byte[] targetRgbData = new byte[sourceImage.rgbData.length];
 			targetImage.rgbData = new byte[targetRgbData.length];
 			int tripletsCount = sourceImage.rgbData.length / 3;
@@ -551,13 +578,13 @@ public final class Converter {
 				factor += 2;
 			}
 
-			// zieldaten komprimieren und tauschen
+			// Zieldaten komprimieren und tauschen
 			Compressor comp = new Compressor();
 			byte[] compressedData = comp.compress(targetImage.rgbData);
 			targetImage.rgbData = compressedData;
 
 
-			// Komp. datensegmentgröße berechnen - länge der RGB-Daten
+			// Datensegmentgröße berechnen
 			long dataSegmentSize = targetImage.rgbData.length;
 			ByteBuffer bb = ByteBuffer.allocate(8);
 			bb.order(ByteOrder.LITTLE_ENDIAN);
@@ -567,7 +594,7 @@ public final class Converter {
 				targetImage.headerData[i + 18] = targetDataSegmentSize[i];
 			}
 
-			// prüfsumme berechnen
+			// Prüfsumme berechnen
 			byte[] targetChecksum = ChecksumTools.getChecksum(targetImage.rgbData); // bytes 26-29: checksum
 			for (int i = 26; i < 30; i++) {
 				targetImage.headerData[i] = targetChecksum[i - 26];
@@ -578,6 +605,8 @@ public final class Converter {
 			os.write(targetImage.headerData);
 			os.write(targetImage.rgbData);
 			outputData = os.toByteArray();
+			
+			// Zieldatei schreiben
 			Files.write(Paths.get(outPath), outputData);
 
 			File myFile = new File(outPath);
@@ -590,13 +619,14 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert ProPra_komprimiert nach TGA_unkomprimiert
+	// Konvertiert ProPra komprimiert nach TGA unkomprimiert
 	protected static void convertCProPraToUTGA(String inPath, String outPath) throws IOException {
 		try {
+			// Quelldatei einlesen, leeres Zielformat erzeugen
 			CompressedProPraImage sourceImage = new CompressedProPraImage(inPath);
 			TGAImage targetImage = new TGAImage();
 
-			/* Header für TGA-Zieldatei aufbauen */
+			// Header für TGA-Zieldatei aufbauen
 			targetImage.headerData[0] = 0; // byte 0 - idLength
 
 			targetImage.headerData[1] = 0; // byte 1 - colorMapType
@@ -637,9 +667,7 @@ public final class Converter {
 
 			targetImage.headerData[17] = 32; // byte 17 - imageAttributes
 
-			/*
-			 * RGB-Daten-Reihenfolge ändern von ProPra(R-B-G / 0-2-1) zu TGA(B-G-R / 2-1-0 )
-			 */
+			// RGB-Reihenfolge ändern für Zielformat
 			byte[] targetRgbData = new byte[sourceImage.rgbData.length];
 			targetImage.rgbData = new byte[targetRgbData.length];
 			int tripletsCount = sourceImage.rgbData.length / 3;
@@ -653,11 +681,12 @@ public final class Converter {
 			}
 
 			byte[] outputData = new byte[targetImage.headerData.length + targetImage.rgbData.length];
-
 			ByteArrayOutputStream os = new ByteArrayOutputStream();
 			os.write(targetImage.headerData);
 			os.write(targetImage.rgbData);
 			outputData = os.toByteArray();
+			
+			// Zieldatei schreiben
 			Files.write(Paths.get(outPath), outputData);
 
 			File myFile = new File(outPath);
@@ -670,13 +699,14 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert ProPra_komprimiert nach TGA_komprimiert
+	// Konvertiert ProPra komprimiert nach TGA komprimiert
 	protected static void convertCProPraToCTGA(String inPath, String outPath) throws IOException {
 		try {
+			// Quelldatei einlesen, leeres Zielformat erzeugen
 			CompressedProPraImage sourceImage = new CompressedProPraImage(inPath);
 			TGAImage targetImage = new TGAImage();
 
-			/* Header für TGA-Zieldatei aufbauen */
+			// Header für TGA-Zieldatei aufbauen
 			targetImage.headerData[0] = 0; // byte 0 - idLength
 
 			targetImage.headerData[1] = 0; // byte 1 - colorMapType
@@ -717,9 +747,7 @@ public final class Converter {
 
 			targetImage.headerData[17] = 32; // byte 17 - imageAttributes
 
-			/*
-			 * RGB-Daten-Reihenfolge ändern von ProPra(R-B-G / 0-2-1) zu TGA(B-G-R / 2-1-0 )
-			 */
+			// RGB-Reihenfolge ändern für Zielformat
 			byte[] targetRgbData = new byte[sourceImage.rgbData.length];
 			targetImage.rgbData = new byte[targetRgbData.length];
 			int tripletsCount = sourceImage.rgbData.length / 3;
@@ -732,6 +760,7 @@ public final class Converter {
 				factor += 2;
 			}
 
+			// RGB-Daten komprimieren
 			Compressor comp = new Compressor();
 			byte[] compressedData = comp.compress(targetImage.rgbData);
 			byte[] outputData = new byte[targetImage.headerData.length + compressedData.length];
@@ -740,6 +769,8 @@ public final class Converter {
 			os.write(targetImage.headerData);
 			os.write(compressedData);
 			outputData = os.toByteArray();
+			
+			// Zieldatei schreiben
 			Files.write(Paths.get(outPath), outputData);
 
 			File myFile = new File(outPath);
@@ -752,10 +783,10 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert ProPra_unkomprimiert nach TGA_komprimiert
+	// Konvertiert ProPra unkomprimiert nach TGA komprimiert
 	protected static void convertUProPraToCTGA(String inPath, String outPath) throws IOException {
 		try {
-			System.out.println("we are here");
+			// Quelldatei einlesen, leeres Zielformat erzeugen
 			ProPraImage sourceImage = new ProPraImage(inPath);
 			TGAImage targetImage = new TGAImage();
 
@@ -801,9 +832,7 @@ public final class Converter {
 
 			targetImage.headerData[17] = 32; // byte 17 - imageAttributes
 
-			/*
-			 * RGB-Daten-Reihenfolge ändern von ProPra(R-B-G / 0-2-1) zu TGA(B-G-R / 2-1-0 )
-			 */
+			// RGB-Reihenfolge ändern für Zielformat
 			byte[] targetRgbData = new byte[sourceImage.rgbData.length];
 			targetImage.rgbData = new byte[targetRgbData.length];
 			int tripletsCount = sourceImage.rgbData.length / 3;
@@ -816,6 +845,7 @@ public final class Converter {
 				factor += 2;
 			}
 
+			// RGB-Daten komprimieren und austauschen
 			Compressor comp = new Compressor();
 			byte[] compressedData = comp.compress(targetImage.rgbData);
 			byte[] outputData = new byte[targetImage.headerData.length + compressedData.length];
@@ -824,6 +854,8 @@ public final class Converter {
 			os.write(targetImage.headerData);
 			os.write(compressedData);
 			outputData = os.toByteArray();
+			
+			// Zieldatei schreiben
 			Files.write(Paths.get(outPath), outputData);
 
 			File myFile = new File(outPath);
@@ -836,16 +868,16 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert ProPra_komprimiert nach ProPra_unkomprimiert
+	// Konvertiert ProPra komprimiert nach ProPra unkomprimiert
 	protected static void convertCProPraToUProPra(String inPath, String outPath) throws IOException {
 		try {
+			// Quelldatei einlesen, leeres Zielformat erzeugen
 			CompressedProPraImage sourceImage = new CompressedProPraImage(inPath);
 			ProPraImage targetImage = new ProPraImage();
 
 
-			/* Header für ProPra-Zieldatei aufbauen */
-			byte[] formatId = { 80, 114, 111, 80, 114, 97, 87, 105, 83, 101, 50, 50 }; // bytes 0 - 11: formatId ->
-																						// "ProPraWiSe22"
+			// Header für ProPra-Zieldatei aufbauen
+			byte[] formatId = { 80, 114, 111, 80, 114, 97, 87, 105, 83, 101, 50, 50 };
 			for (int i = 0; i < 12; i++) {
 				targetImage.headerData[i] = formatId[i];
 			}
@@ -860,10 +892,10 @@ public final class Converter {
 
 			targetImage.headerData[17] = 24; // byte 17: bitsPerDot
 
-			// quelldatenreihenfolge für zielformat ändern
+			// RGB-Daten übernehmen (Dekomprimiert wurde im Bild-Objekt!)
 			targetImage.rgbData = sourceImage.rgbData;
 
-			// datensegmentgröße berechnen
+			// Datensegmentgröße berechnen
 			int imageWidth = sourceImage.getWidth();
 			int imageHeight = sourceImage.getHeight();
 			System.out.println(imageWidth);
@@ -879,7 +911,7 @@ public final class Converter {
 				targetImage.headerData[i + 18] = targetDataSegmentSize[i];
 			}
 
-			// prüfsumme berechnen
+			// Prüfsumme berechnen
 			byte[] targetChecksum = ChecksumTools.getChecksum(targetImage.rgbData); // bytes 26-29: checksum
 			for (int i = 26; i < 30; i++) {
 				targetImage.headerData[i] = targetChecksum[i - 26];
@@ -890,6 +922,8 @@ public final class Converter {
 			os.write(targetImage.headerData);
 			os.write(targetImage.rgbData);
 			outputData = os.toByteArray();
+			
+			// Zieldatei schreiben
 			Files.write(Paths.get(outPath), outputData);
 
 			File myFile = new File(outPath);
@@ -903,27 +937,33 @@ public final class Converter {
 		}
 	}
 
-	// Konvertiert ProPra_komprimiert nach ProPra_komprimiert
+	// Konvertiert ProPra komprimiert nach ProPra komprimiert
 	protected static void convertCProPraToCProPra(String inPath, String outPath) throws IOException {
-		byte[] inputData = Files.readAllBytes(Paths.get(inPath));
-		Files.write(Paths.get(outPath), inputData);
+		try {
+			// Quelldaten 1:1 in Zieldaten überführen und Zieldatei schreiben
+			byte[] inputData = Files.readAllBytes(Paths.get(inPath));
+			Files.write(Paths.get(outPath), inputData);
 
-		File myFile = new File(outPath);
-		if (myFile.isFile()) {
-			System.out.println("...erfolgreich konvertiert!");
+			File myFile = new File(outPath);
+			if (myFile.isFile()) {
+				System.out.println("...erfolgreich konvertiert!");
 
+			}
+		} catch (Exception e) {
+			System.err.println("Lese-/Schreibfehler!");
+			System.exit(123);
 		}
 	}
 
-	// Konvertiert ProPra_unkomprimiert nach ProPra_komprimiert
+	// Konvertiert ProPra unkomprimiert nach ProPra komprimiert
 	protected static void convertUProPraToCProPra(String inPath, String outPath) throws IOException {
 		try {
+			// Quelldatei einlesen, leeres Zielformat erzeugen
 			ProPraImage sourceImage = new ProPraImage(inPath);
 			ProPraImage targetImage = new ProPraImage();
 
-			/* Header für ProPra-Zieldatei aufbauen */
-			byte[] formatId = { 80, 114, 111, 80, 114, 97, 87, 105, 83, 101, 50, 50 }; // bytes 0 - 11: formatId ->
-																						// "ProPraWiSe22"
+			// Header für ProPra-Zieldatei aufbauen
+			byte[] formatId = { 80, 114, 111, 80, 114, 97, 87, 105, 83, 101, 50, 50 };
 			for (int i = 0; i < 12; i++) {
 				targetImage.headerData[i] = formatId[i];
 			}
@@ -938,12 +978,12 @@ public final class Converter {
 
 			targetImage.headerData[17] = 24; // byte 17: bitsPerDot
 
-			// zieldaten komprimieren und tauschen
+			// RGB-Daten komprimieren und austauschen
 			Compressor comp = new Compressor();
 			byte[] compressedData = comp.compress(sourceImage.rgbData);
 			targetImage.rgbData = compressedData;
 
-			// Komp. datensegmentgröße berechnen - länge der RGB-Daten
+			// Datensegmentgröße berechnen
 			long dataSegmentSize = targetImage.rgbData.length;
 			ByteBuffer bb = ByteBuffer.allocate(8);
 			bb.order(ByteOrder.LITTLE_ENDIAN);
@@ -953,7 +993,7 @@ public final class Converter {
 				targetImage.headerData[i + 18] = targetDataSegmentSize[i];
 			}
 
-			// prüfsumme berechnen
+			// Prüfsumme berechnen
 			byte[] targetChecksum = ChecksumTools.getChecksum(targetImage.rgbData); // bytes 26-29: checksum
 			for (int i = 26; i < 30; i++) {
 				targetImage.headerData[i] = targetChecksum[i - 26];
@@ -964,6 +1004,8 @@ public final class Converter {
 			os.write(targetImage.headerData);
 			os.write(targetImage.rgbData);
 			outputData = os.toByteArray();
+			
+			// Zieldatei schreiben
 			Files.write(Paths.get(outPath), outputData);
 
 			File myFile = new File(outPath);
