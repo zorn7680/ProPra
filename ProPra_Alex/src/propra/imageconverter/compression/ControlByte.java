@@ -1,6 +1,15 @@
 package propra.imageconverter.compression;
 
-/* This class represents a control byte for compression/decompression. */
+/*
+ * CHANGELOG Abschnitt 2
+ * - Klasse neu eingeführt, keine Vorgängerversion vorhanden
+ */
+
+/* 
+ * Diese Klasse repräsentiert ein Steuerbyte für Dekompressions-/Kompressions-
+ * Operationen. Sie wird sowohl für die Kompression als auch für die 
+ * Dekompression verwendet (jeweils mit dem entspr. Konstruktor).
+ */
 
 public class ControlByte {
 	final byte STEUERBIT = (byte) 0b10000000;
@@ -8,32 +17,17 @@ public class ControlByte {
 
 	private int type;
 	private int length;
+	private int result;
 
 	public ControlByte(byte inByte) {
 		this.type = (STEUERBIT & inByte) != 0 ? 1 : 0;
 		this.length = (~STEUERBIT & inByte) + 1;
 	}
 
-	public ControlByte(int length, int type) {
+	public ControlByte(boolean inType, int length) {
 		this.length = length;
-		this.type = type;
-	}
-
-//	public void printInByte() {
-//		System.out.println(inByte);
-//	}
-
-
-
-	public byte generateControlByte(boolean wh, int repCounter) {
-		int result;
-		if (wh) {
-			result = repCounter;
-		} else {
-			result = repCounter + 128;
-		}
-
-		return (byte) result;
+		this.type = (inType == true ? 1 : 0);
+		this.result = (type == 1 ? length + 128 : length);
 	}
 
 	public int getType() {
@@ -42,5 +36,9 @@ public class ControlByte {
 
 	public int getLength() {
 		return this.length;
+	}
+
+	public byte getByteValue() {
+		return (byte) result;
 	}
 }
